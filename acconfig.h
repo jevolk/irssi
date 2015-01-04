@@ -1,6 +1,7 @@
 /* misc.. */
 #undef HAVE_SOCKS_H
 #undef HAVE_STATIC_PERL
+#undef HAVE_STATIC_OTR
 #undef HAVE_GMODULE
 
 /* macros/curses checks */
