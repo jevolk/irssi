@@ -55,6 +55,7 @@ v0.8.18 2016-02-13  The Irssi team <staff@irssi.org>
 	+ Disable SSLv3 due to the POODLE vulnerability.
 	+ SSL ciphers can now be specified per server.
 	+ Added SNI support for SSL.
+	+ TLS: Rename SSL to TLS throughout the code and command interfaces.
 	- /ignore now respects -pattern on merge (#78).
 	- irssiproxy (BNC) module now uses correct line endings.
 	- Fix missing lines on large pastes (FS#905).
