@@ -56,6 +56,7 @@ v0.8.18 2016-02-13  The Irssi team <staff@irssi.org>
 	+ SSL ciphers can now be specified per server.
 	+ Added SNI support for SSL.
 	+ TLS: Rename SSL to TLS throughout the code and command interfaces.
+	+ TLS: Automatically connect using TLS for known IRC networks that supports encrypted connections.
 	+ TLS: OpenSSL is now a required dependency.
 	- /ignore now respects -pattern on merge (#78).
 	- irssiproxy (BNC) module now uses correct line endings.
