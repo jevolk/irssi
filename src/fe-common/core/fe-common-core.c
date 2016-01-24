@@ -215,15 +215,10 @@ void fe_common_core_deinit(void)
 	keyboard_deinit();
 	printtext_deinit();
 	formats_deinit();
-<<<<<<< 28db3f170b6cce59f2a7a0ecc6dd31e6b183a1d1
-        fe_exec_deinit();
-        fe_expandos_deinit();
-=======
 #ifndef WIN32
 	fe_exec_deinit();
 #endif
 	fe_expandos_deinit();
->>>>>>> Display certificate information upon connect.
 	fe_help_deinit();
 	fe_ignore_deinit();
 	fe_log_deinit();
