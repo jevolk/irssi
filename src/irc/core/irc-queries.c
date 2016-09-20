@@ -60,6 +60,9 @@ static void check_query_changes(IRC_SERVER_REC *server, const char *nick,
 {
 	QUERY_REC *query;
 
+	if (server->disconnected)
+		return;
+
 	if (server_ischannel(SERVER(server), target))
 		return;
 

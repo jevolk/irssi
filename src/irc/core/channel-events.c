@@ -55,6 +55,9 @@ static void irc_server_event(IRC_SERVER_REC *server, const char *line)
 {
 	char *params, *numeric, *channel;
 
+	if (!server || server->disconnected)
+		return;
+
 	/* We'll be checking "4xx <your nick> <channel>" for channels
 	   which we haven't joined yet. 4xx are error codes and should
 	   indicate that the join failed. */

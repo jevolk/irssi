@@ -208,7 +208,9 @@ static void notifylist_deinit_server(IRC_SERVER_REC *server)
 	if (!IS_IRC_SERVER(server))
 		return;
 
-	mserver = MODULE_DATA(server);
+	if (!(mserver = MODULE_DATA(server)))
+		return;
+
 	while (mserver->notify_users != NULL) {
 		rec = mserver->notify_users->data;
 
@@ -223,7 +225,9 @@ void notifylist_left(IRC_SERVER_REC *server, NOTIFY_NICK_REC *rec)
 {
 	MODULE_SERVER_REC *mserver;
 
-	mserver = MODULE_DATA(server);
+	if (!(mserver = MODULE_DATA(server)))
+		return;
+
 	mserver->notify_users = g_slist_remove(mserver->notify_users, rec);
 
 	if (rec->host_ok && rec->away_ok) {
@@ -255,6 +259,9 @@ static void notifylist_check_join(IRC_SERVER_REC *server, const char *nick,
 	char *user, *host;
 
 	if (nick == NULL)
+		return;
+
+	if (server->disconnected)
 		return;
 
 	notify = notifylist_find(nick, server->connrec->chatnet);

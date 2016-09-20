@@ -51,14 +51,6 @@ static GSList *global_lastmsgs;
 static int completion_auto, completion_strict;
 static int completion_match_case;
 
-#define SERVER_LAST_MSG_ADD(server, nick) \
-	last_msg_add(&((MODULE_SERVER_REC *) MODULE_DATA(server))->lastmsgs, \
-		     nick, TRUE, keep_privates_count)
-
-#define CHANNEL_LAST_MSG_ADD(channel, nick, own) \
-	last_msg_add(&((MODULE_CHANNEL_REC *) MODULE_DATA(channel))->lastmsgs, \
-		     nick, own, keep_publics_count)
-
 static gboolean contains_uppercase(const char *s1)
 {
 	const char *ch;
@@ -136,6 +128,22 @@ static void last_msg_add(GSList **list, const char *nick, int own, int max)
 	*list = g_slist_prepend(*list, rec);
 }
 
+static inline void server_last_msg_add(SERVER_REC *server, const char *nick)
+{
+	MODULE_SERVER_REC *rec;
+
+	if ((rec = MODULE_DATA(server)) != NULL)
+		last_msg_add(&rec->lastmsgs, nick, TRUE, keep_privates_count);
+}
+
+static inline void channel_last_msg_add(CHANNEL_REC *channel, const char *nick, int own)
+{
+	MODULE_CHANNEL_REC *rec;
+
+	if ((rec = MODULE_DATA(channel)) != NULL)
+		last_msg_add(&rec->lastmsgs, nick, own, keep_publics_count);
+}
+
 void completion_last_message_add(const char *nick)
 {
 	g_return_if_fail(nick != NULL);
@@ -177,7 +185,7 @@ static void sig_message_public(SERVER_REC *server, const char *msg,
 	channel = channel_find(server, target);
 	if (channel != NULL) {
                 own = nick_match_msg(channel, msg, server->nick);
-		CHANNEL_LAST_MSG_ADD(channel, nick, own);
+		channel_last_msg_add(channel, nick, own);
 	}
 }
 
@@ -188,7 +196,7 @@ static void sig_message_join(SERVER_REC *server, const char *channel,
 
 	chanrec = channel_find(server, channel);
 	if (chanrec != NULL)
-		CHANNEL_LAST_MSG_ADD(chanrec, nick, FALSE);
+		channel_last_msg_add(chanrec, nick, FALSE);
 }
 
 static void sig_message_private(SERVER_REC *server, const char *msg,
@@ -197,7 +205,7 @@ static void sig_message_private(SERVER_REC *server, const char *msg,
 	g_return_if_fail(server != NULL);
 	g_return_if_fail(nick != NULL);
 
-	SERVER_LAST_MSG_ADD(server, nick);
+	server_last_msg_add(server, nick);
 }
 
 static void sig_message_own_public(SERVER_REC *server, const char *msg,
@@ -229,7 +237,7 @@ static void sig_message_own_public(SERVER_REC *server, const char *msg,
 		}
                 g_free(msgnick);
 		if (nick != NULL && nick != channel->ownnick)
-			CHANNEL_LAST_MSG_ADD(channel, nick->nick, TRUE);
+			channel_last_msg_add(channel, nick->nick, TRUE);
 	}
 }
 
@@ -239,7 +247,7 @@ static void sig_message_own_private(SERVER_REC *server, const char *msg,
 	g_return_if_fail(server != NULL);
 
 	if (target != NULL && query_find(server, target) == NULL)
-		SERVER_LAST_MSG_ADD(server, target);
+		server_last_msg_add(server, target);
 }
 
 static void sig_nick_removed(CHANNEL_REC *channel, NICK_REC *nick)
@@ -247,7 +255,9 @@ static void sig_nick_removed(CHANNEL_REC *channel, NICK_REC *nick)
         MODULE_CHANNEL_REC *mchannel;
 	LAST_MSG_REC *rec;
 
-        mchannel = MODULE_DATA(channel);
+	if (!(mchannel = MODULE_DATA(channel)))
+		return;
+
 	rec = last_msg_find(mchannel->lastmsgs, nick->nick);
 	if (rec != NULL) last_msg_destroy(&mchannel->lastmsgs, rec);
 }
@@ -258,7 +268,9 @@ static void sig_nick_changed(CHANNEL_REC *channel, NICK_REC *nick,
         MODULE_CHANNEL_REC *mchannel;
 	LAST_MSG_REC *rec;
 
-        mchannel = MODULE_DATA(channel);
+	if (!(mchannel = MODULE_DATA(channel)))
+		return;
+
 	rec = last_msg_find(mchannel->lastmsgs, oldnick);
 	if (rec != NULL) {
 		g_free(rec->nick);
@@ -276,6 +288,7 @@ static int last_msg_cmp(LAST_MSG_REC *m1, LAST_MSG_REC *m2)
 static void completion_msg_server(GSList **list, SERVER_REC *server,
 				  const char *nick, const char *prefix)
 {
+	MODULE_SERVER_REC *rec;
 	LAST_MSG_REC *msg;
 	GSList *tmp;
 	int len;
@@ -283,8 +296,14 @@ static void completion_msg_server(GSList **list, SERVER_REC *server,
 	g_return_if_fail(nick != NULL);
 
 	len = strlen(nick);
-	tmp = server == NULL ? global_lastmsgs :
-		((MODULE_SERVER_REC *) MODULE_DATA(server))->lastmsgs;
+
+	if (server == NULL)
+		tmp = global_lastmsgs;
+	else if ((rec = MODULE_DATA(server)) != NULL)
+		tmp = rec->lastmsgs;
+	else
+		tmp = NULL;
+
 	for (; tmp != NULL; tmp = tmp->next) {
 		LAST_MSG_REC *rec = tmp->data;
 
@@ -368,7 +387,10 @@ static void complete_from_nicklist(GList **outlist, CHANNEL_REC *channel,
 	   nicks of all the "own messages" are placed before others */
         ownlist = NULL;
 	len = strlen(nick);
-        mchannel = MODULE_DATA(channel);
+
+	if (!(mchannel = MODULE_DATA(channel)))
+		return;
+
 	for (tmp = mchannel->lastmsgs; tmp != NULL; tmp = tmp->next) {
 		LAST_MSG_REC *rec = tmp->data;
 
@@ -760,8 +782,8 @@ static void sig_erase_complete_msg(WINDOW_REC *window, const char *word,
 	completion_last_message_remove(word);
 
 	/* check from server specific list */
-	if (server != NULL) {
-		mserver = MODULE_DATA(server);
+	if (server != NULL && ((mserver = MODULE_DATA(server)) != NULL)) {
+
 		for (tmp = mserver->lastmsgs; tmp != NULL; tmp = tmp->next) {
 			LAST_MSG_REC *rec = tmp->data;
 
@@ -1131,7 +1153,9 @@ static void sig_server_disconnected(SERVER_REC *server)
 
 	g_return_if_fail(server != NULL);
 
-        mserver = MODULE_DATA(server);
+	if (!(mserver = MODULE_DATA(server)))
+		return;
+
 	while (mserver->lastmsgs)
                 last_msg_destroy(&mserver->lastmsgs, mserver->lastmsgs->data);
 }
@@ -1142,7 +1166,9 @@ static void sig_channel_destroyed(CHANNEL_REC *channel)
 
 	g_return_if_fail(channel != NULL);
 
-        mchannel = MODULE_DATA(channel);
+	if (!(mchannel = MODULE_DATA(channel)))
+		return;
+
 	while (mchannel->lastmsgs != NULL) {
 		last_msg_destroy(&mchannel->lastmsgs,
 				 mchannel->lastmsgs->data);

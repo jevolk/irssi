@@ -330,6 +330,12 @@ static void sig_message_private(SERVER_REC *server, const char *msg,
 {
 	QUERY_REC *query;
 
+	if (!server || server->disconnected)
+	{
+		signal_stop();
+		return;
+	}
+
 	/* own message returned by bouncer? */
 	int own = (!g_strcmp0(nick, server->nick));
 

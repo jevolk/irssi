@@ -135,6 +135,9 @@ int ignore_check(SERVER_REC *server, const char *nick, const char *host,
         char *nickmask;
         int len, best_mask, best_match, best_patt;
 
+	if (server->disconnected)
+		return FALSE;
+
         if (nick == NULL) nick = "";
 
 	chanrec = server == NULL || channel == NULL ? NULL :

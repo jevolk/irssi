@@ -99,7 +99,9 @@ static int flood_timeout(void)
 		if (!IS_IRC_SERVER(rec))
                         continue;
 
-		mserver = MODULE_DATA(rec);
+		if (!(mserver = MODULE_DATA(rec)))
+			continue;
+
 		g_hash_table_foreach_remove(mserver->floodlist,
 					    (GHRFunc) flood_hash_check_remove,
 					    &now);
@@ -151,8 +153,10 @@ static void flood_deinit_server(IRC_SERVER_REC *server)
 	if (!IS_IRC_SERVER(server))
                 return;
 
-	mserver = MODULE_DATA(server);
-	if (mserver != NULL && mserver->floodlist != NULL) {
+	if (!(mserver = MODULE_DATA(server)))
+		return;
+
+	if (mserver->floodlist != NULL) {
 		flood_timecheck = 0;
 
 		g_hash_table_foreach(mserver->floodlist,
@@ -192,7 +196,9 @@ static void flood_newmsg(IRC_SERVER_REC *server, int level, const char *nick,
 	g_return_if_fail(server != NULL);
 	g_return_if_fail(nick != NULL);
 
-	mserver = MODULE_DATA(server);
+	if (!(mserver = MODULE_DATA(server)))
+		return;
+
 	flood = g_hash_table_lookup(mserver->floodlist, nick);
 
 	rec = flood == NULL ? NULL : flood_find(flood, level, target);
@@ -245,7 +251,7 @@ static void flood_privmsg(IRC_SERVER_REC *server, const char *data,
 	g_return_if_fail(data != NULL);
 	g_return_if_fail(server != NULL);
 
-	if (addr == NULL || g_ascii_strcasecmp(nick, server->nick) == 0)
+	if (addr == NULL || server->disconnected || g_ascii_strcasecmp(nick, server->nick) == 0)
 		return;
 
 	params = event_get_params(data, 2, &target, &text);
@@ -265,7 +271,7 @@ static void flood_notice(IRC_SERVER_REC *server, const char *data,
 	g_return_if_fail(data != NULL);
 	g_return_if_fail(server != NULL);
 
-	if (addr == NULL || g_ascii_strcasecmp(nick, server->nick) == 0)
+	if (addr == NULL || server->disconnected || g_ascii_strcasecmp(nick, server->nick) == 0)
 		return;
 
 	params = event_get_params(data, 2, &target, &text);
@@ -283,7 +289,7 @@ static void flood_ctcp(IRC_SERVER_REC *server, const char *data,
 	g_return_if_fail(data != NULL);
 	g_return_if_fail(server != NULL);
 
-	if (addr == NULL || g_ascii_strcasecmp(nick, server->nick) == 0)
+	if (addr == NULL || server->disconnected || g_ascii_strcasecmp(nick, server->nick) == 0)
 		return;
 
 	level = g_ascii_strncasecmp(data, "ACTION ", 7) != 0 ? MSGLEVEL_CTCPS :

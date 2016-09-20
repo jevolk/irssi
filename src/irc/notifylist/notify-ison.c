@@ -40,7 +40,8 @@ NOTIFY_NICK_REC *notify_nick_create(IRC_SERVER_REC *server, const char *nick)
 	MODULE_SERVER_REC *mserver;
 	NOTIFY_NICK_REC *rec;
 
-	mserver = MODULE_DATA(server);
+	if (!(mserver = MODULE_DATA(server)))
+		return NULL;
 
 	rec = g_new0(NOTIFY_NICK_REC, 1);
 	rec->nick = g_strdup(nick);
@@ -65,7 +66,9 @@ NOTIFY_NICK_REC *notify_nick_find(IRC_SERVER_REC *server, const char *nick)
 	NOTIFY_NICK_REC *rec;
 	GSList *tmp;
 
-	mserver = MODULE_DATA(server);
+	if (!(mserver = MODULE_DATA(server)))
+		return NULL;
+
 	for (tmp = mserver->notify_users; tmp != NULL; tmp = tmp->next) {
 		rec = tmp->data;
 
@@ -80,7 +83,9 @@ static void ison_send(IRC_SERVER_REC *server, GString *cmd)
 {
 	MODULE_SERVER_REC *mserver;
 
-	mserver = MODULE_DATA(server);
+	if (!(mserver = MODULE_DATA(server)))
+		return;
+
 	mserver->ison_count++;
 
 	g_string_truncate(cmd, cmd->len-1);
@@ -108,7 +113,9 @@ static void notifylist_timeout_server(IRC_SERVER_REC *server)
 	if (!IS_IRC_SERVER(server))
 		return;
 
-	mserver = MODULE_DATA(server);
+	if (!(mserver = MODULE_DATA(server)))
+		return;
+
 	if (mserver->ison_count > 0) {
 		/* still not received all replies to previous /ISON commands.. */
 		return;
@@ -233,7 +240,8 @@ static void ison_check_joins(IRC_SERVER_REC *server)
 	int send_whois;
 	time_t now;
 
-	mserver = MODULE_DATA(server);
+	if (!(mserver = MODULE_DATA(server)))
+		return;
 
 	now = time(NULL);
 	newnicks = NULL;
@@ -270,7 +278,9 @@ static void ison_check_parts(IRC_SERVER_REC *server)
 	MODULE_SERVER_REC *mserver;
 	GSList *tmp, *next;
 
-	mserver = MODULE_DATA(server);
+	if (!(mserver = MODULE_DATA(server)))
+		return;
+
 	for (tmp = mserver->notify_users; tmp != NULL; tmp = next) {
 		NOTIFY_NICK_REC *rec = tmp->data;
 		next = tmp->next;
@@ -292,7 +302,9 @@ static void event_ison(IRC_SERVER_REC *server, const char *data)
 
 	params = event_get_params(data, 2, NULL, &online);
 
-	mserver = MODULE_DATA(server);
+	if (!(mserver = MODULE_DATA(server)))
+		return;
+
 	ison_save_users(mserver, online);
 
 	if (--mserver->ison_count > 0) {
